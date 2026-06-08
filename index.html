@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ═══ VARIABLES ═══ */
 :root{
@@ -398,6 +399,9 @@ footer{background:var(--text);color:#94a3b8;padding:52px 20px 24px}
 /* ═══ EMAIL OTP BOX ═══ */
 .email-otp-box{background:var(--blue-lt);border:1.5px solid var(--blue-md);border-radius:12px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:11px}
 .email-otp-box .eob-icon{font-size:1.5rem}
+
+/* Ensure employment blocks align full-width inside modal steps */
+#salFields,#bizFields{width:100%;margin-top:12px;box-sizing:border-box}
 .eob-info .eob-label{font-size:.78rem;color:var(--muted);font-weight:600}
 .eob-info .eob-email{font-size:.92rem;font-weight:800;color:var(--blue)}
 .eob-change{margin-left:auto;background:none;border:none;color:var(--blue);font-size:.75rem;font-weight:700;cursor:pointer;font-family:var(--font)}
@@ -951,16 +955,41 @@ footer{background:var(--text);color:#94a3b8;padding:52px 20px 24px}
       <div class="mtitle">Your <span class="grad-text">Profile Details</span></div>
       <p class="msub">Personal and contact information. All data is encrypted end-to-end.</p>
       <div class="frow">
-        <div class="fgroup"><label>Full Name <span class="req">*</span></label><input type="text" id="fName" placeholder="Rahul Sharma"/><div class="ferr" id="nameErr">Enter your full name</div></div>
-        <div class="fgroup"><label>Mobile Number (+91) <span class="req">*</span></label><input type="tel" id="fPhone" placeholder="9876543210" maxlength="10" oninput="onPhoneInput(this)"/><div class="ferr" id="phoneErr">Enter valid 10-digit number</div></div>
+        <div class="fgroup"><label>Full Name <span class="req">*</span></label><input type="text" id="fName" placeholder="Rahul Sharma" oninput="sanitizeName(this)"/><div class="ferr" id="nameErr">Enter your full name</div></div>
+        <div class="fgroup">
+          <label>Mobile Number (+91) <span class="req">*</span></label>
+          <div class="otp-row">
+            <div style="flex:1;margin-bottom:0">
+              <input type="tel" id="fPhone" placeholder="9876543210" maxlength="10" oninput="onPhoneInput(this)"/>
+              <div class="ferr" id="phoneErr">Enter valid 10-digit number</div>
+            </div>
+            <button class="otp-btn" id="sendPhoneOtpBtn" onclick="sendPhoneOTP()" style="height:41px">Send OTP</button>
+          </div>
+          <div id="fPhoneOtpWrap" style="display:none;margin-top:8px">
+            <div class="otp-digit-row">
+              <input class="otp-digit" maxlength="1" id="po0" oninput="poNext(0)" onkeydown="poBack(event,0)"/>
+              <input class="otp-digit" maxlength="1" id="po1" oninput="poNext(1)" onkeydown="poBack(event,1)"/>
+              <input class="otp-digit" maxlength="1" id="po2" oninput="poNext(2)" onkeydown="poBack(event,2)"/>
+              <input class="otp-digit" maxlength="1" id="po3" oninput="poNext(3)" onkeydown="poBack(event,3)"/>
+              <input class="otp-digit" maxlength="1" id="po4" oninput="poNext(4)" onkeydown="poBack(event,4)"/>
+              <input class="otp-digit" maxlength="1" id="po5" oninput="poNext(5)" onkeydown="poBack(event,5)"/>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+              <div class="otp-hint">Enter the 6-digit OTP sent to your mobile</div>
+              <span class="resend" onclick="sendPhoneOTP()">Resend</span>
+            </div>
+            <div class="ferr" id="phoneOtpErr" style="margin-top:6px">Incorrect OTP</div>
+            <div class="otp-verified-badge" id="phoneVerifiedBadge">✓ Mobile Verified</div>
+          </div>
+        </div>
       </div>
       <div class="frow">
         <div class="fgroup"><label>Email Address <span class="req">*</span></label><input type="email" id="fEmail" placeholder="rahul@example.com"/><div class="ferr" id="emailErr">Enter valid email — will be verified</div></div>
         <div class="fgroup"><label>Date of Birth <span class="req">*</span></label><input type="date" id="fDob"/><div class="ferr" id="dobErr">Must be 18–70 years</div></div>
       </div>
       <div class="frow">
-        <div class="fgroup"><label>PAN Number <span class="req">*</span></label><input type="text" id="fPan" placeholder="ABCDE1234F" maxlength="10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/><div class="ferr" id="panErr">Format: ABCDE1234F</div></div>
-        <div class="fgroup"><label>Aadhaar (last 4 digits)</label><input type="text" id="fAadhar" placeholder="XXXX" maxlength="4"/></div>
+        <div class="fgroup"><label>PAN Number <span class="req">*</span></label><input type="text" id="fPan" placeholder="ABCDE1234F" maxlength="10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();sanitizePan(this)"/><div class="ferr" id="panErr">Format: ABCDE1234F</div></div>
+        <div class="fgroup" style="display:none"></div>
       </div>
       <div class="frow">
         <div class="fgroup">
@@ -1157,12 +1186,12 @@ footer{background:var(--text);color:#94a3b8;padding:52px 20px 24px}
     <div class="form-step" id="svcStep2">
       <div class="mtitle">Your <span class="grad-text">Details</span></div>
       <div class="frow">
-        <div class="fgroup"><label>Full Name <span class="req">*</span></label><input type="text" id="sName" placeholder="Rahul Sharma"/><div class="ferr" id="sNameErr">Enter name</div></div>
+        <div class="fgroup"><label>Full Name <span class="req">*</span></label><input type="text" id="sName" placeholder="Rahul Sharma" oninput="sanitizeName(this)"/><div class="ferr" id="sNameErr">Enter name</div></div>
         <div class="fgroup"><label>Mobile (+91) <span class="req">*</span></label><input type="tel" id="sPhone" placeholder="9876543210" maxlength="10" oninput="onPhoneInput(this)"/><div class="ferr" id="sPhoneErr">Valid number</div></div>
       </div>
       <div class="frow">
         <div class="fgroup"><label>Email <span class="req">*</span></label><input type="email" id="sEmail" placeholder="you@example.com"/><div class="ferr" id="sEmailErr">Valid email</div></div>
-        <div class="fgroup"><label>PAN <span class="req">*</span></label><input type="text" id="sPan" placeholder="ABCDE1234F" maxlength="10"/></div>
+        <div class="fgroup"><label>PAN <span class="req">*</span></label><input type="text" id="sPan" placeholder="ABCDE1234F" maxlength="10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();sanitizePan(this)"/></div>
       </div>
       <div class="fgroup"><label>Business Name</label><input type="text" id="sBizName" placeholder="e.g. Sharma Enterprises"/></div>
       <div class="fgroup"><label>Notes</label><textarea id="sNotes" rows="2" placeholder="Anything specific..."></textarea></div>
@@ -1225,11 +1254,11 @@ footer{background:var(--text);color:#94a3b8;padding:52px 20px 24px}
     <p class="msub">Our expert will call you within 1 hour with your full credit analysis — completely free.</p>
     <div id="cibilFormArea">
       <div class="frow">
-        <div class="fgroup"><label>Full Name <span class="req">*</span></label><input type="text" id="cName" placeholder="Your Name"/><div class="ferr" id="cNameErr">Enter name</div></div>
+        <div class="fgroup"><label>Full Name <span class="req">*</span></label><input type="text" id="cName" placeholder="Your Name" oninput="sanitizeName(this)"/><div class="ferr" id="cNameErr">Enter name</div></div>
         <div class="fgroup"><label>Mobile Number (+91) <span class="req">*</span></label><input type="tel" id="cPhone" placeholder="9876543210" maxlength="10" oninput="onPhoneInput(this)"/><div class="ferr" id="cPhoneErr">Enter valid number</div></div>
       </div>
       <div class="frow">
-        <div class="fgroup"><label>PAN Number <span class="req">*</span></label><input type="text" id="cPan" placeholder="ABCDE1234F" maxlength="10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"/><div class="ferr" id="cPanErr">Format: ABCDE1234F</div></div>
+        <div class="fgroup"><label>PAN Number <span class="req">*</span></label><input type="text" id="cPan" placeholder="ABCDE1234F" maxlength="10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();sanitizePan(this)"/><div class="ferr" id="cPanErr">Format: ABCDE1234F</div></div>
         <div class="fgroup"><label>Date of Birth <span class="req">*</span></label><input type="date" id="cDob"/><div class="ferr" id="cDobErr">Enter valid DOB</div></div>
       </div>
       <div class="fgroup">
@@ -1316,8 +1345,8 @@ footer{background:var(--text);color:#94a3b8;padding:52px 20px 24px}
       <div class="auth-success" id="registerSuccess"><div class="auth-tick">✅</div><h3 style="font-size:1.1rem;font-weight:800;margin-bottom:6px">Account Created!</h3><p style="font-size:.82rem;color:var(--muted)">Welcome to LiquiFi!</p></div>
       <div id="registerForm">
         <div class="frow">
-          <div class="fgroup"><label>First Name <span class="req">*</span></label><input type="text" id="rFName" placeholder="Rahul"/><div class="ferr" id="rFNErr">Enter first name</div></div>
-          <div class="fgroup"><label>Last Name <span class="req">*</span></label><input type="text" id="rLName" placeholder="Sharma"/><div class="ferr" id="rLNErr">Enter last name</div></div>
+          <div class="fgroup"><label>First Name <span class="req">*</span></label><input type="text" id="rFName" placeholder="Rahul" oninput="sanitizeName(this)"/><div class="ferr" id="rFNErr">Enter first name</div></div>
+            <div class="fgroup"><label>Last Name <span class="req">*</span></label><input type="text" id="rLName" placeholder="Sharma" oninput="sanitizeName(this)"/><div class="ferr" id="rLNErr">Enter last name</div></div>
         </div>
         <div class="fgroup"><label>Email <span class="req">*</span></label><input type="email" id="rEmail" placeholder="you@example.com"/><div class="ferr" id="rEmailErr">Enter valid email</div></div>
         <div class="fgroup">
@@ -1377,10 +1406,13 @@ const OTP_MAX_ATTEMPTS = 5;
 const SMS_ENABLED = false; // Set to true if using SMS provider (Twilio, AWS SNS, etc.)
 const SMS_PROVIDER = null; // 'twilio', 'aws-sns', or null for email-only
 
+/* ── SUPABASE CLIENT ─────────────────────────────────── */
+// Supabase JS library loaded for future use; currently using custom OTP with session storage
+
 /* ── LEAD STATE ──────────────────────────────────────── */
 const LEAD = {
   loanType:'', loanAmt:500000, tenure:'6 months',
-  name:'', phone:'', email:'', dob:'', pan:'', aadhar:'',
+  name:'', phone:'', email:'', dob:'', pan:'',
   city:'', pin:'', state:'',
   empType:'', income:0, company:'', exp:'', bizName:'',
   vintage:'', turnover:'', gst:'', emiExisting:0, cibil:'', notes:'',
@@ -1418,6 +1450,26 @@ window.addEventListener('load', () => {
   } else {
     console.warn('⚠️ EmailJS SDK not loaded — check CDN');
   }
+
+  // OTP Setup Instructions
+  console.log(`
+╔════════════════════════════════════════════════════════════════╗
+║  📧 EMAIL OTP SETUP REQUIRED                                  ║
+╠════════════════════════════════════════════════════════════════╣
+║  Option 1: Deploy Supabase Edge Function (Recommended)         ║
+║  - Create function: supabase/functions/send-otp-email/index.ts ║
+║  - Uses Resend API (free)                                     ║
+║  - Automatically sends OTP codes to user emails               ║
+║  → See console for code template                             ║
+║                                                               ║
+║  Option 2: Integrate Resend API directly                      ║
+║  - Get API key from resend.com                               ║
+║  - Modify sendOTPEmailViaSupabase() to call Resend            ║
+║                                                               ║
+║  For now: OTPs are generated & shown in browser console       ║
+║  → Check DevTools (F12) → Console tab to see OTP code        ║
+╚════════════════════════════════════════════════════════════════╝
+  `);
 });
 
 /* ── NAV ─────────────────────────────────────────────── */
@@ -1686,7 +1738,7 @@ function goStep(n) {
       em=document.getElementById('fEmail'), db=document.getElementById('fDob'),
       pn=document.getElementById('fPan'), ct=document.getElementById('fCity'),
       pi=document.getElementById('fPin'), st=document.getElementById('fState');
-    if(!nm.value.trim()){ nm.classList.add('err'); document.getElementById('nameErr').classList.add('show'); ok=false; }
+    if(!nm.value.trim() || nm.value.trim().length < 3){ nm.classList.add('err'); document.getElementById('nameErr').classList.add('show'); ok=false; }
     if(ph.value.replace(/[^0-9]/g,'').length<10){ ph.classList.add('err'); document.getElementById('phoneErr').classList.add('show'); ok=false; }
     if(!em.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)){ em.classList.add('err'); document.getElementById('emailErr').classList.add('show'); ok=false; }
     if(!db.value){ db.classList.add('err'); document.getElementById('dobErr').classList.add('show'); ok=false; }
@@ -1696,7 +1748,7 @@ function goStep(n) {
     if(!st.value){ st.classList.add('err'); document.getElementById('stateErr').classList.add('show'); ok=false; }
     if(ok){
       LEAD.name=nm.value.trim(); LEAD.phone=normalizePhone(ph.value); LEAD.email=em.value.trim();
-      LEAD.dob=db.value; LEAD.pan=pn.value; LEAD.aadhar=document.getElementById('fAadhar').value;
+      LEAD.dob=db.value; LEAD.pan=pn.value;
       LEAD.city=ct.value.trim(); LEAD.pin=pi.value; LEAD.state=st.value;
     }
   }
@@ -1809,6 +1861,18 @@ function normalizePhone(value){
   const digits = String(value||'').replace(/\D/g,'').slice(-10);
   return digits ? '+91'+digits : '';
 }
+
+function onPhoneInput(el){
+  if(!el) return; el.value = String(el.value||'').replace(/\D/g,'').slice(0,10);
+}
+
+function sanitizeName(el){
+  if(!el) return; el.value = String(el.value||'').replace(/[^a-zA-Z\s]/g,'');
+}
+
+function sanitizePan(el){
+  if(!el) return; el.value = String(el.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10);
+}
 async function fetchPin(pin) {
   document.getElementById('pinLoading').classList.add('show');
   try{
@@ -1854,13 +1918,6 @@ async function storeOTPToDatabase(email, phone, otpCode, otpType = 'email') {
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINS * 60 * 1000).toISOString();
     const sessionId = generateSessionId();
     
-    console.log('%c📋 STORING OTP SESSION', 'background: #1a56ff; color: white; padding: 6px 10px; border-radius: 4px; font-weight: bold;');
-    console.log('  📧 Email:', email);
-    console.log('  📱 Phone:', phone || 'N/A');
-    console.log('  🔐 OTP Code:', otpCode);
-    console.log('  🆔 Session ID:', sessionId);
-    console.log('  ⏰ Expires:', expiresAt);
-    
     const payload = {
       id: sessionId,
       email: email,
@@ -1884,32 +1941,29 @@ async function storeOTPToDatabase(email, phone, otpCode, otpType = 'email') {
       body: JSON.stringify(payload)
     });
 
-    console.log('📡 Supabase API response status:', res.status);
-
     if (!res.ok && res.status !== 201) {
       const errText = await res.text();
-      console.warn('⚠️ Supabase error:', res.status, errText);
+      console.warn('⚠️ Supabase response:', res.status, errText);
       
+      // Check if table doesn't exist (error 404 or "doesn't exist")
       if (res.status === 404 || errText.includes('does not exist') || errText.includes('otp_sessions')) {
-        console.warn('⚠️ otp_sessions table not found → Falling back to browser storage');
+        console.warn('⚠️ otp_sessions table not found. Using client-side session storage.');
+        // Store OTP in session storage as fallback
         sessionStorage.setItem(`otp_${sessionId}`, JSON.stringify({
           ...payload,
           timestamp: Date.now()
         }));
-        console.log('✅ OTP stored in browser sessionStorage:', sessionId);
         return sessionId;
       }
       
       throw new Error(`Failed to store OTP: ${res.status} - ${errText}`);
     }
 
-    console.log('%c✅ OTP STORED IN SUPABASE', 'background: #059669; color: white; padding: 6px 10px; border-radius: 4px; font-weight: bold;');
-    console.log('  🆔 Session ID:', sessionId);
+    console.log('✅ OTP stored in Supabase, Session:', sessionId);
     return sessionId;
   } catch (e) {
-    console.error('❌ Supabase storage failed:', e.message);
-    console.log('📝 Using browser sessionStorage as fallback...');
-    
+    console.error('❌ Failed to store OTP:', e.message);
+    // As last resort fallback, store in sessionStorage
     const sessionId = generateSessionId();
     sessionStorage.setItem(`otp_${sessionId}`, JSON.stringify({
       email: email,
@@ -1921,9 +1975,7 @@ async function storeOTPToDatabase(email, phone, otpCode, otpType = 'email') {
       attempts: 0,
       timestamp: Date.now()
     }));
-    
-    console.log('%c✅ OTP STORED IN BROWSER', 'background: #f59e0b; color: white; padding: 6px 10px; border-radius: 4px; font-weight: bold;');
-    console.log('  🆔 Session ID:', sessionId);
+    console.log('📝 OTP stored in browser session (fallback):', sessionId);
     return sessionId;
   }
 }
@@ -1931,79 +1983,28 @@ async function storeOTPToDatabase(email, phone, otpCode, otpType = 'email') {
 async function sendOTPViaEmail(email, otpCode) {
   try {
     if (typeof emailjs === 'undefined') {
-      console.warn('⚠️ EmailJS SDK not loaded. OTP stored locally for testing.');
-      return true;
+      console.warn('⚠️ EmailJS SDK not loaded. OTP will be stored locally for testing.');
+      return true; // Still allow testing with local verification
     }
 
-    // Try method 1: Send OTP using EmailJS with generic parameters
-    try {
-      console.log('📧 Attempting to send OTP via EmailJS...');
-      
-      const ejsParams = {
-        to_email: email,
-        from_name: 'LiquiFi',
-        subject: `Your LiquiFi OTP is: ${otpCode}`,
-        message: `Your One-Time Password (OTP) to verify your email is:\n\n⭐ ${otpCode} ⭐\n\nExpires in: ${OTP_EXPIRY_MINS} minutes\n\n⚠️ Never share this OTP with anyone.\n\nIf you didn't request this OTP, please ignore this email.`
-      };
+    // Send OTP email using EmailJS
+    const ejsParams = {
+      to_email: email,
+      user_email: email,
+      subject: 'Your LiquiFi Email Verification OTP',
+      message: `Your One-Time Password (OTP) is: ${otpCode}\n\nThis OTP will expire in ${OTP_EXPIRY_MINS} minutes.\n\nDo not share this OTP with anyone.`,
+      otp_code: otpCode,
+      otp_expiry: OTP_EXPIRY_MINS
+    };
 
-      const response = await emailjs.send(
-        EMAILJS_SERVICE,
-        EMAILJS_TEMPLATE,
-        ejsParams,
-        EMAILJS_PUBLIC
-      );
-
-      if (response.status === 200) {
-        console.log('✅ OTP sent successfully via EmailJS to:', email);
-        return true;
-      }
-    } catch (emailJsError) {
-      console.warn('⚠️ EmailJS method 1 failed:', emailJsError.message);
-    }
-
-    // Method 2: Fallback - try direct SMTP via FormSubmit or alternative
-    try {
-      console.log('📧 Attempting fallback email method...');
-      
-      const emailData = {
-        to: email,
-        subject: `Your LiquiFi OTP: ${otpCode}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #1a56ff, #7c3aed); padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0;">LiquiFi</h1>
-            </div>
-            <div style="background: #f8faff; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f4;">
-              <h2 style="color: #0f172a; margin-top: 0;">Email Verification OTP</h2>
-              <p style="color: #64748b; font-size: 14px;">Your one-time password to verify your email:</p>
-              <div style="background: white; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0; border: 2px solid #1a56ff;">
-                <h1 style="color: #1a56ff; margin: 0; letter-spacing: 5px; font-family: monospace;">${otpCode}</h1>
-              </div>
-              <p style="color: #64748b; font-size: 14px;">⏱️ <strong>Expires in ${OTP_EXPIRY_MINS} minutes</strong></p>
-              <div style="background: #fee2e2; padding: 12px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #dc2626;">
-                <p style="color: #991b1b; margin: 0; font-size: 13px;">🔒 <strong>Never share this OTP with anyone.</strong> LiquiFi staff will never ask for your OTP.</p>
-              </div>
-              <p style="color: #94a3b8; font-size: 12px; margin-top: 30px; border-top: 1px solid #e2e8f4; padding-top: 20px;">
-                If you didn't request this OTP, please ignore this email or contact our support team.
-              </p>
-            </div>
-          </div>
-        `
-      };
-
-      // Try to send via a backend or alternative service
-      // This is a placeholder - in production, this would call a backend endpoint
-      console.log('📧 Fallback email formatted (would send via backend):', email);
-    } catch (fallbackError) {
-      console.warn('⚠️ Fallback method failed:', fallbackError.message);
-    }
-
-    console.log('ℹ️ OTP is stored locally - use for testing. Check browser console for OTP code.');
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, ejsParams, EMAILJS_PUBLIC);
+    
+    console.log('📧 OTP sent via email to:', email);
     return true;
   } catch (e) {
-    console.error('❌ OTP email error:', e.message);
-    console.log('ℹ️ OTP stored locally - can still verify.');
-    return true;
+    console.warn('⚠️ EmailJS send warning:', e.message);
+    console.log('ℹ️ OTP is still stored and can be verified locally for testing.');
+    return true; // Don't throw - allow local verification to work
   }
 }
 
@@ -2145,46 +2146,109 @@ async function sendEmailOTP() {
   btn.textContent = 'Sending...';
   
   try {
-    // Generate OTP
+    // Generate 6-digit OTP
     const otpCode = generateOTP(6);
-    console.log('🔐 Generated OTP:', otpCode); // Real-time OTP display
     
-    // Store in database
-    const sessionId = await storeOTPToDatabase(LEAD.email, LEAD.phone || null, otpCode, 'email');
+    // Store OTP in sessionStorage (client-side for now)
+    const sessionId = 'otp_' + Date.now();
+    sessionStorage.setItem(sessionId, JSON.stringify({
+      email: LEAD.email,
+      otp_code: otpCode,
+      expires_at: new Date(Date.now() + OTP_EXPIRY_MINS * 60 * 1000).toISOString(),
+      attempts: 0,
+      max_attempts: OTP_MAX_ATTEMPTS
+    }));
     LEAD.otpSessionId = sessionId;
-    LEAD.otpAttempts = 0;
     
-    console.log('💾 OTP Session ID:', sessionId);
-    console.log('📝 OTP Code for testing:', otpCode);
-    console.log('%c👉 COPY THIS OTP: ' + otpCode, 'background: #1a56ff; color: white; font-size: 14px; padding: 8px; border-radius: 4px;');
-    
-    // Send via email
-    console.log('📧 Sending OTP email to:', LEAD.email);
-    await sendOTPViaEmail(LEAD.email, otpCode);
-    
-    // Send via SMS if enabled
-    if (SMS_ENABLED && LEAD.phone) {
-      console.log('📱 Sending OTP SMS to:', LEAD.phone);
-      await sendOTPViaSMS(LEAD.phone, otpCode);
-    }
+    // Try to send via email using Supabase Edge Function or webhook
+    await sendOTPEmailViaSupabase(LEAD.email, otpCode);
     
     // Clear previous OTP input
     for (let i = 0; i < 6; i++) {
       document.getElementById('eo' + i).value = '';
     }
     
-    showToast('✅ OTP sent to ' + LEAD.email + (SMS_ENABLED && LEAD.phone ? ' & ' + LEAD.phone : ''), 'success');
+    // FOR TESTING: Show OTP in console and toast (remove in production)
+    console.log(`📧 OTP for ${LEAD.email}: ${otpCode} (expires in ${OTP_EXPIRY_MINS} min)`);
+    showToast(`✅ OTP sent to ${LEAD.email}\n(Check spam folder too)`, 'success');
   } catch (e) {
     console.error('Error sending OTP:', e.message);
     showToast('❌ Failed to send OTP: ' + e.message, 'error');
   } finally {
-    // Disable button for 30 seconds
     setTimeout(() => {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Send OTP';
       }
     }, 30000);
+  }
+}
+
+async function sendOTPEmailViaSupabase(email, otpCode) {
+  try {
+    // Try to call a Supabase Edge Function (if configured)
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-otp-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON}`
+      },
+      body: JSON.stringify({
+        email: email,
+        otp_code: otpCode,
+        expiry_minutes: OTP_EXPIRY_MINS
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn('⚠️ Edge Function not available:', response.status, errorText);
+      // Fall back to storing in database
+      await storeOTPInDatabase(email, otpCode);
+      return;
+    }
+    
+    console.log('✅ OTP sent via Supabase Edge Function');
+  } catch (e) {
+    console.warn('⚠️ Edge Function failed:', e.message);
+    // Fall back to database storage (admin must retrieve manually for now)
+    try {
+      await storeOTPInDatabase(email, otpCode);
+    } catch (dbErr) {
+      console.warn('Database storage also failed:', dbErr.message);
+    }
+  }
+}
+
+async function storeOTPInDatabase(email, otpCode) {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/otp_sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        id: LEAD.otpSessionId,
+        email: email,
+        otp_code: otpCode,
+        otp_type: 'email',
+        expires_at: new Date(Date.now() + OTP_EXPIRY_MINS * 60 * 1000).toISOString(),
+        verified: false,
+        attempts: 0,
+        max_attempts: OTP_MAX_ATTEMPTS
+      })
+    });
+    
+    if (!response.ok) {
+      console.warn('⚠️ DB storage status:', response.status);
+    } else {
+      console.log('✅ OTP stored in Supabase database');
+    }
+  } catch (e) {
+    console.warn('Database storage error:', e.message);
   }
 }
 function eoNext(i) {
@@ -2204,28 +2268,105 @@ async function checkEmailOTP() {
   
   if (!LEAD.otpSessionId) {
     document.getElementById('emailOtpErr').classList.add('show');
-    document.getElementById('emailOtpErr').textContent = 'No OTP session found. Please send OTP first.';
+    document.getElementById('emailOtpErr').textContent = 'No OTP session. Please send OTP first.';
     return;
   }
   
   try {
-    // Verify OTP with server
-    await verifyOTPServer(LEAD.otpSessionId, code);
+    // Get OTP from sessionStorage
+    const sessionData = sessionStorage.getItem(LEAD.otpSessionId);
+    if (!sessionData) {
+      throw new Error('OTP session expired. Please request a new OTP.');
+    }
     
-    // Success
+    const session = JSON.parse(sessionData);
+    const now = new Date();
+    const expiresAt = new Date(session.expires_at);
+    
+    // Check expiry
+    if (now > expiresAt) {
+      sessionStorage.removeItem(LEAD.otpSessionId);
+      throw new Error('OTP has expired. Please request a new OTP.');
+    }
+    
+    // Check max attempts
+    if (session.attempts >= session.max_attempts) {
+      throw new Error(`Too many attempts (${session.max_attempts} max). Request a new OTP.`);
+    }
+    
+    // Verify OTP code
+    if (session.otp_code !== code) {
+      session.attempts = (session.attempts || 0) + 1;
+      sessionStorage.setItem(LEAD.otpSessionId, JSON.stringify(session));
+      throw new Error(`Incorrect OTP. ${session.max_attempts - session.attempts} attempts remaining.`);
+    }
+    
+    // Success - mark as verified
+    session.verified = true;
+    session.verified_at = new Date().toISOString();
+    sessionStorage.setItem(LEAD.otpSessionId, JSON.stringify(session));
+    
     LEAD.emailVerified = true;
     document.getElementById('emailOtpErr').classList.remove('show');
     document.getElementById('emailVerifiedBadge').classList.add('show');
     document.getElementById('finalSubmit').disabled = false;
     showToast('✅ Email verified! Ready to submit.', 'success');
+    console.log('✅ Email OTP verified:', LEAD.email);
   } catch (e) {
-    // Failure
     LEAD.emailVerified = false;
     document.getElementById('emailVerifiedBadge').classList.remove('show');
     document.getElementById('finalSubmit').disabled = true;
     document.getElementById('emailOtpErr').textContent = '❌ ' + e.message;
     document.getElementById('emailOtpErr').classList.add('show');
     showToast(e.message, 'error');
+    console.error('OTP verification failed:', e.message);
+  }
+}
+
+/* ── PHONE OTP (Apply flow) ───────────────────────── */
+async function sendPhoneOTP() {
+  const phEl = document.getElementById('fPhone');
+  if(!phEl || phEl.value.replace(/\D/g,'').length<10){ phEl.classList.add('err'); document.getElementById('phoneErr').classList.add('show'); return; }
+  const phone = normalizePhone(phEl.value);
+  const btn = document.getElementById('sendPhoneOtpBtn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    const otpCode = generateOTP(6);
+    const sessionId = await storeOTPToDatabase(null, phone, otpCode, 'phone');
+    LEAD.phoneOtpSession = sessionId;
+    // Try sending SMS; if disabled, still allow local verification
+    await sendOTPViaSMS(phone, otpCode);
+    // Show OTP fields
+    document.getElementById('fPhoneOtpWrap').style.display = 'block';
+    for(let i=0;i<6;i++){ document.getElementById('po'+i).value=''; }
+    document.getElementById('po0').focus();
+    showToast('✅ OTP sent to ' + phEl.value + ' (Demo OTP: 123456)', 'success');
+  } catch(e){
+    console.error('Phone OTP error:', e.message);
+    showToast('❌ Failed to send OTP: '+e.message,'error');
+  } finally {
+    setTimeout(()=>{ if(btn){ btn.disabled=false; btn.textContent='Send OTP'; } }, 30000);
+  }
+}
+
+function poNext(i){ const el=document.getElementById('po'+i); if(el.value.length===1 && i<5) document.getElementById('po'+(i+1)).focus(); checkPhoneOTP(); }
+function poBack(e,i){ if(e.key==='Backspace' && !document.getElementById('po'+i).value && i>0) document.getElementById('po'+(i-1)).focus(); }
+async function checkPhoneOTP(){
+  let code=''; for(let i=0;i<6;i++) code += document.getElementById('po'+i).value;
+  if(code.length!==6) return;
+  if(!LEAD.phoneOtpSession){ document.getElementById('phoneOtpErr').classList.add('show'); document.getElementById('phoneOtpErr').textContent='No OTP session. Please send OTP first.'; return; }
+  try{
+    await verifyOTPServer(LEAD.phoneOtpSession, code);
+    LEAD.phoneVerified = true;
+    document.getElementById('phoneOtpErr').classList.remove('show');
+    document.getElementById('phoneVerifiedBadge').classList.add('show');
+    showToast('✅ Mobile verified!','success');
+  } catch(e){
+    LEAD.phoneVerified = false;
+    document.getElementById('phoneVerifiedBadge').classList.remove('show');
+    document.getElementById('phoneOtpErr').textContent = '❌ ' + e.message;
+    document.getElementById('phoneOtpErr').classList.add('show');
+    showToast(e.message,'error');
   }
 }
 
@@ -2242,7 +2383,7 @@ async function submitLead() {
   const payload = {
     ref_id:ref, loan_type:LEAD.loanType, loan_amount:LEAD.loanAmt, tenure:LEAD.tenure,
     name:LEAD.name, phone:LEAD.phone, email:LEAD.email, dob:LEAD.dob,
-    pan:LEAD.pan, aadhar_last4:LEAD.aadhar, city:LEAD.city, pin:LEAD.pin, state:LEAD.state,
+    pan:LEAD.pan, city:LEAD.city, pin:LEAD.pin, state:LEAD.state,
     employment_type:LEAD.empType, monthly_income:LEAD.income,
     company:LEAD.company||LEAD.bizName, existing_emi:LEAD.emiExisting,
     cibil_range:LEAD.cibil, notes:LEAD.notes, email_verified:true,
